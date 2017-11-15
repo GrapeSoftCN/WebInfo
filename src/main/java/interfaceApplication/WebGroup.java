@@ -6,6 +6,7 @@ import org.json.simple.JSONObject;
 import JGrapeSystem.rMsg;
 import Model.CommonModel;
 import apps.appsProxy;
+import authority.plvDef.plvType;
 import interfaceModel.GrapeDBSpecField;
 import interfaceModel.GrapeTreeDBModel;
 import json.JSONHelper;
@@ -15,6 +16,7 @@ public class WebGroup {
     private GrapeTreeDBModel group;
     private GrapeDBSpecField gDbSpecField;
     private CommonModel model;
+    private Integer userType = null;
 
     public WebGroup() {
         model = new CommonModel();
@@ -24,6 +26,7 @@ public class WebGroup {
         gDbSpecField.importDescription(appsProxy.tableConfig("WebGroup"));
         group.descriptionModel(gDbSpecField);
         group.bindApp();
+        group.enableCheck();//开启权限检查
     }
 
     /**
@@ -34,7 +37,7 @@ public class WebGroup {
      */
     public String WebGroupInsert(String webgroupInfo) {
         String result = rMsg.netMSG(100, "新增站群失败");
-        int code = 99;
+        Object code = 99;
         if (StringHelper.InvaildString(webgroupInfo)) {
             JSONObject groupInfo = JSONObject.toJSON(webgroupInfo);
             // 判断库中是否存在同名站群
@@ -42,9 +45,16 @@ public class WebGroup {
             if (findByName(name)) {
                 return rMsg.netMSG(1, "站群已存在"); // 站群已存在
             }
-            code = group.data(groupInfo).autoComplete().insertOnce() != null ? 0 : 99;
+            JSONObject rMode = new JSONObject(plvType.chkType, plvType.powerVal).puts(plvType.chkVal, 100);//设置默认查询权限
+        	JSONObject uMode = new JSONObject(plvType.chkType, plvType.powerVal).puts(plvType.chkVal, 200);
+        	JSONObject dMode = new JSONObject(plvType.chkType, plvType.powerVal).puts(plvType.chkVal, 300);
+        	groupInfo.put("rMode", rMode.toJSONString()); //添加默认查看权限
+        	groupInfo.put("uMode", uMode.toJSONString()); //添加默认修改权限
+        	groupInfo.put("dMode", dMode.toJSONString()); //添加默认删除权限
+            
+            code = group.data(groupInfo).autoComplete().insertEx();
         }
-        result = code == 0 ? rMsg.netMSG(0, "新增站群成功") : result;
+        result = code != null ? rMsg.netMSG(0, "新增站群成功") : result;
         return result;
     }
 
@@ -86,7 +96,7 @@ public class WebGroup {
      */
     public String WebGroupUpdate(String wbgid, String webgroupInfo) {
         String result = rMsg.netMSG(100, "站群修改失败");
-        int code = 99;
+        Object code = 99;
         JSONObject _webinfo = JSONHelper.string2json(webgroupInfo);
         if (_webinfo != null && _webinfo.size() > 0) {
             if (_webinfo.containsKey("name")) {
@@ -95,8 +105,8 @@ public class WebGroup {
                     return rMsg.netMSG(1, "该站群已存在"); // 站群已存在
                 }
             }
-            code = group.eq("_id", wbgid).data(_webinfo).update() != null ? 0 : 99;
-            result = code == 0 ? rMsg.netMSG(0, "站群修改成功") : result;
+            code = group.eq("_id", wbgid).data(_webinfo).updateEx();
+            result = code != null ? rMsg.netMSG(0, "站群修改成功") : result;
         }
         return result;
     }

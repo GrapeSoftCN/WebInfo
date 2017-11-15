@@ -6,6 +6,7 @@ import org.json.simple.JSONObject;
 import JGrapeSystem.rMsg;
 import Model.CommonModel;
 import apps.appsProxy;
+import authority.plvDef.plvType;
 import interfaceModel.GrapeDBSpecField;
 import interfaceModel.GrapeTreeDBModel;
 import nlogger.nlogger;
@@ -21,6 +22,7 @@ public class WebInfo {
     private session se;
     private JSONObject userInfo = null;
     private String currentWeb = null;
+    private Integer userType = null;
 
     public WebInfo() {
         model = new CommonModel();
@@ -30,11 +32,13 @@ public class WebInfo {
         gDbSpecField.importDescription(appsProxy.tableConfig("WebInfo"));
         web.descriptionModel(gDbSpecField);
         web.bindApp();
+        web.enableCheck();//开启权限检查
 
         se = new session();
         userInfo = se.getDatas();
         if (userInfo != null && userInfo.size() != 0) {
             currentWeb = userInfo.getString("currentWeb"); // 当前用户所属网站id
+            userType =userInfo.getInt("userType");//当前用户身份
         }
         currentWeb = "597ff7609c93690f5a54291b";
     }
@@ -56,6 +60,12 @@ public class WebInfo {
             return webInfo;
         }
         JSONObject temp = JSONObject.toJSON(webInfo);
+        JSONObject rMode = new JSONObject(plvType.chkType, plvType.powerVal).puts(plvType.chkVal, 100);//设置默认查询权限
+    	JSONObject uMode = new JSONObject(plvType.chkType, plvType.powerVal).puts(plvType.chkVal, 200);
+    	JSONObject dMode = new JSONObject(plvType.chkType, plvType.powerVal).puts(plvType.chkVal, 300);
+    	temp.put("rMode", rMode.toJSONString()); //添加默认查看权限
+    	temp.put("uMode", uMode.toJSONString()); //添加默认修改权限
+    	temp.put("dMode", dMode.toJSONString()); //添加默认删除权限
         if (temp != null && temp.size() > 0) {
             if (temp.containsKey("type")) {
                 type = temp.getString("type");
@@ -72,7 +82,7 @@ public class WebInfo {
                 }
                 temp.put("title", TimeHelper.nowMillis());
             case "0":
-                info = (String) web.data(temp).autoComplete().insertOnce();
+                info = (String) web.data(temp).autoComplete().insertEx();
                 obj = findbyid(info);
                 break;
             }
@@ -90,14 +100,14 @@ public class WebInfo {
      */
     public String WebUpdate(String wbid, String WebInfo) {
         String result = rMsg.netMSG(100, "站点信息修改失败");
-        int code = 99;
+        Object code = 99;
         WebInfo = CheckParam(WebInfo);
         if (WebInfo.contains("errorcode")) {
             return WebInfo;
         }
         JSONObject object = JSONObject.toJSON(WebInfo);
-        code = web.eq("_id", wbid).dataEx(object).update() != null ? 0 : 99;
-        result = code == 0 ? rMsg.netMSG(0, "站点信息修改成功") : result;
+        code = web.eq("_id", wbid).dataEx(object).updateEx();
+        result = code != null ? rMsg.netMSG(0, "站点信息修改成功") : result;
         return result;
     }
 
