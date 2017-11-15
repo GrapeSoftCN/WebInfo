@@ -100,14 +100,14 @@ public class WebInfo {
      */
     public String WebUpdate(String wbid, String WebInfo) {
         String result = rMsg.netMSG(100, "站点信息修改失败");
-        Object code = 99;
+        boolean code = false;
         WebInfo = CheckParam(WebInfo);
         if (WebInfo.contains("errorcode")) {
             return WebInfo;
         }
         JSONObject object = JSONObject.toJSON(WebInfo);
         code = web.eq("_id", wbid).dataEx(object).updateEx();
-        result = code != null ? rMsg.netMSG(0, "站点信息修改成功") : result;
+        result = code ? rMsg.netMSG(0, "站点信息修改成功") : result;
         return result;
     }
 
